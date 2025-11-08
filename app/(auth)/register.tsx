@@ -3,7 +3,7 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import React, { useState } from 'react';
 import { Alert, Button, StyleSheet, Text, TextInput, View } from 'react-native';
-import { auth, db } from '../../firebase/config'; 
+import { auth, db } from '../../firebase/config';
 
 export default function RegisterScreen() {
   const [email, setEmail] = useState('');
@@ -32,6 +32,7 @@ export default function RegisterScreen() {
         level: 1,
         currentXp: 0,
         xpToNextLevel: 100,
+        lastResetDate: new Date().toISOString().split('T')[0], // Store as 'YYYY-MM-DD'
       });
       console.log('Step 2: User stats doc created in Firestore');
 
