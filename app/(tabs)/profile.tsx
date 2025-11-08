@@ -1,7 +1,8 @@
 import { signOut } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore'; // Import onSnapshot
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Button, DimensionValue, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, DimensionValue, Pressable, StyleSheet, Text, View } from 'react-native';
+import Colours from '../../constants/Colours';
 import { useAuth } from '../../context/AuthContext';
 import { auth, db } from '../../firebase/config';
 
@@ -62,27 +63,32 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Profile</Text>
-      <Text style={styles.email}>
-        {stats ? stats.email : 'Loading...'}
-      </Text>
+      <Text style={styles.title}>Your Profile</Text>
 
       {/* --- Stats Display --- */}
       {stats && (
-        <View style={styles.statsContainer}>
-          <Text style={styles.levelText}>Level: {stats.level}</Text>
-          <Text style={styles.xpText}>
-            XP: {stats.currentXp} / {stats.xpToNextLevel}
+        <View style={styles.statsCard}>
+          <Text style={styles.email}>
+            {stats.email}
           </Text>
-          
-          {/* --- XP Progress Bar --- */}
-          <View style={styles.xpBarBackground}>
-            <View style={[styles.xpBarFill, { width: getXpBarWidth() }]} />
+          <View style={styles.statsContainer}>
+            <Text style={styles.levelText}>Level {stats.level}</Text>
+            
+            {/* --- XP Progress Bar --- */}
+            <View style={styles.xpBarBackground}>
+              <View style={[styles.xpBarFill, { width: getXpBarWidth() }]} />
+            </View>
+            <Text style={styles.xpText}>
+              {stats.currentXp} / {stats.xpToNextLevel} XP
+            </Text>
           </View>
         </View>
       )}
 
-      <Button title="Sign Out" onPress={handleSignOut} />
+      {/* We use Pressable for a custom button */}
+      <Pressable style={styles.signOutButton} onPress={handleSignOut}>
+        <Text style={styles.signOutText}>Sign Out</Text>
+      </Pressable>
     </View>
   );
 }
@@ -90,44 +96,72 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     padding: 20,
+    backgroundColor: Colours.light.background, // Use background color
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
-    marginBottom: 10,
+    color: Colours.light.text,
+    marginBottom: 20,
+    marginTop: 40, // Add space at the top
+  },
+  // We'll wrap stats in a card
+  statsCard: {
+    backgroundColor: Colours.light.card,
+    borderRadius: 12,
+    padding: 20,
+    width: '100%',
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   email: {
     fontSize: 16,
-    marginBottom: 30,
-    color: 'gray',
+    color: Colours.light.textSecondary,
+    marginBottom: 20,
   },
   statsContainer: {
     width: '100%',
-    marginBottom: 40,
     alignItems: 'center',
   },
   levelText: {
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: 22,
+    fontWeight: '700',
+    color: Colours.light.text,
   },
   xpText: {
     fontSize: 16,
-    marginTop: 5,
+    marginTop: 8,
+    color: Colours.light.textSecondary,
   },
   xpBarBackground: {
-    width: '90%',
+    width: '100%',
     height: 20,
-    backgroundColor: '#eee',
+    backgroundColor: Colours.light.border, // Use border color for background
     borderRadius: 10,
-    marginTop: 10,
-    overflow: 'hidden', // Ensures the fill stays within the rounded corners
+    marginTop: 15,
+    overflow: 'hidden',
   },
   xpBarFill: {
     height: '100%',
-    backgroundColor: '#007bff', // A nice blue
+    backgroundColor: Colours.light.tint, // Use tint color for XP
     borderRadius: 10,
+  },
+  // Make the sign out button pop a bit
+  signOutButton: {
+    marginTop: 'auto', // Pushes it to the bottom
+    backgroundColor: '#FF3B30', // A red color
+    padding: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  signOutText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
