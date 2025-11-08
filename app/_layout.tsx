@@ -24,7 +24,7 @@ function RootLayoutNav() {
       // Are we in the (auth) group?
       if (segments[0] === '(auth)') {
         // If so, redirect to the main 'home' screen
-        router.replace('/(tabs)/index');
+        router.replace('/(tabs)');
       }
     }
   }, [user, loading, segments, router]); // Re-run this logic when auth state changes
