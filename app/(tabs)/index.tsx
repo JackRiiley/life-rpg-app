@@ -1,98 +1,184 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  onSnapshot,
+  query,
+  Timestamp,
+  updateDoc,
+  where
+} from 'firebase/firestore';
+import React, { useEffect, useState } from 'react';
+import { Alert, Button, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useAuth } from '../../context/AuthContext'; // Import our auth hook
+import { db } from '../../firebase/config'; // Import our db
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+// Define the shape of a Task object
+interface Task {
+  id: string;
+  title: string;
+  isComplete: boolean;
+  // We can add difficulty, type ('daily', 'todo'), etc. later
+}
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const { user } = useAuth(); // Get the logged-in user
+  const [tasks, setTasks] = useState<Task[]>([]); // List of tasks
+  const [newTaskTitle, setNewTaskTitle] = useState(''); // Text from the input
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  // --- 1. Read Tasks (Real-time) ---
+  useEffect(() => {
+    // This effect runs when the 'user' object is available
+    if (user) {
+      // Create a query to get tasks for this user
+      const tasksQuery = query(
+        collection(db, 'tasks'), 
+        where('ownerId', '==', user.uid)
+      );
+
+      // onSnapshot listens for real-time updates
+      const unsubscribe = onSnapshot(tasksQuery, (snapshot) => {
+        const userTasks = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        } as Task));
+        setTasks(userTasks);
+      });
+
+      // Cleanup: Unsubscribe when the component unmounts
+      return () => unsubscribe();
+    }
+  }, [user]); // Re-run this effect if the user changes
+
+  // --- 2. Create Task ---
+  const handleAddTask = async () => {
+    if (newTaskTitle.trim() === '') {
+      Alert.alert('Empty Task', 'Please enter a task title.');
+      return;
+    }
+
+    if (user) {
+      try {
+        // Add a new document to the 'tasks' collection
+        await addDoc(collection(db, 'tasks'), {
+          title: newTaskTitle,
+          isComplete: false,
+          ownerId: user.uid,
+          createdAt: Timestamp.now() // Good for sorting later
+        });
+        setNewTaskTitle(''); // Clear the input field
+      } catch (error) {
+        console.error('Error adding task:', error);
+        Alert.alert('Error', 'Could not add task.');
+      }
+    }
+  };
+  
+  // --- 3. Update Task (Toggle Complete) ---
+  const handleToggleComplete = async (task: Task) => {
+    const taskRef = doc(db, 'tasks', task.id);
+    try {
+      // We'll add XP logic here later!
+      await updateDoc(taskRef, {
+        isComplete: !task.isComplete
+      });
+    } catch (error) {
+      console.error('Error updating task:', error);
+    }
+  };
+
+  // --- 4. Delete Task ---
+  const handleDeleteTask = async (task: Task) => {
+    const taskRef = doc(db, 'tasks', task.id);
+    try {
+      await deleteDoc(taskRef);
+    } catch (error) {
+      console.error('Error deleting task:', error);
+    }
+  };
+
+  // Helper component to render each task in the list
+  const renderTask = ({ item }: { item: Task }) => (
+    <View style={styles.taskItem}>
+      <Pressable onPress={() => handleToggleComplete(item)} style={styles.taskTextContainer}>
+        {/* Style the text differently if it's complete */}
+        <Text style={[styles.taskTitle, item.isComplete && styles.taskComplete]}>
+          {item.title}
+        </Text>
+      </Pressable>
+      <Button title="Delete" color="red" onPress={() => handleDeleteTask(item)} />
+    </View>
+  );
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>My Quests</Text>
+      
+      {/* --- Add Task Form --- */}
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="Add a new quest..."
+          value={newTaskTitle}
+          onChangeText={setNewTaskTitle}
+        />
+        <Button title="Add" onPress={handleAddTask} />
+      </View>
+
+      {/* --- Task List --- */}
+      <FlatList
+        data={tasks}
+        renderItem={renderTask}
+        keyExtractor={item => item.id}
+        ListEmptyComponent={<Text>No quests yet. Add one!</Text>}
+      />
+    </View>
   );
 }
 
+// --- Styles ---
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: {
+    flex: 1,
+    padding: 20,
+    paddingTop: 50,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+  },
+  inputContainer: {
     flexDirection: 'row',
+    marginBottom: 20,
+  },
+  input: {
+    flex: 1,
+    height: 40,
+    borderColor: 'gray',
+    borderWidth: 1,
+    borderRadius: 5,
+    paddingLeft: 8,
+    marginRight: 8,
+  },
+  taskItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 8,
+    padding: 15,
+    backgroundColor: '#f9f9f9',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  taskTextContainer: {
+    flex: 1,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  taskTitle: {
+    fontSize: 18,
+  },
+  taskComplete: {
+    textDecorationLine: 'line-through',
+    color: 'gray',
   },
 });
