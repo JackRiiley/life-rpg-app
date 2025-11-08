@@ -3,6 +3,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   onSnapshot,
   query,
   Timestamp,
@@ -19,6 +20,7 @@ interface Task {
   id: string;
   title: string;
   isComplete: boolean;
+  xp: number;
   // We can add difficulty, type ('daily', 'todo'), etc. later
 }
 
@@ -60,12 +62,17 @@ export default function HomeScreen() {
 
     if (user) {
       try {
+        const difficulty = 'easy';
+        const xpValue = 20;
+
         // Add a new document to the 'tasks' collection
         await addDoc(collection(db, 'tasks'), {
           title: newTaskTitle,
           isComplete: false,
           ownerId: user.uid,
-          createdAt: Timestamp.now() // Good for sorting later
+          createdAt: Timestamp.now(), // Good for sorting later
+          difficulty: difficulty,
+          xp: xpValue,
         });
         setNewTaskTitle(''); // Clear the input field
       } catch (error) {
@@ -76,15 +83,59 @@ export default function HomeScreen() {
   };
   
   // --- 3. Update Task (Toggle Complete) ---
-  const handleToggleComplete = async (task: Task) => {
+  const handleToggleComplete = async (task: Task) => { // Make sure your Task interface includes `xp: number`
+    if (!user) return; // Can't do anything if there's no user
+
     const taskRef = doc(db, 'tasks', task.id);
+    const userStatsRef = doc(db, 'users', user.uid); // Get a ref to the user's stats doc
+
     try {
-      // We'll add XP logic here later!
+      // --- A: Grant XP if we are completing the task ---
+      if (!task.isComplete) { 
+        // We are toggling *to* complete
+        
+        // --- B: Get the user's current stats ---
+        const userDoc = await getDoc(userStatsRef);
+        if (!userDoc.exists()) {
+          console.error("User stats doc not found!");
+          return;
+        }
+        
+        let { currentXp, level, xpToNextLevel } = userDoc.data();
+        
+        // --- C: Add the XP ---
+        const taskXp = task.xp || 20; // Default to 20 if xp not on task
+        currentXp += taskXp;
+        console.log(`+${taskXp} XP! New total: ${currentXp}`);
+
+        // --- D: Check for Level Up ---
+        if (currentXp >= xpToNextLevel) {
+          level += 1; // LEVEL UP!
+          const remainingXp = currentXp - xpToNextLevel; // Carry over XP
+          currentXp = remainingXp;
+          xpToNextLevel = Math.floor(xpToNextLevel * 1.5); // Increase next level's cost (e.g., 100, 150, 225)
+
+          Alert.alert("LEVEL UP!", `You are now Level ${level}!`);
+        }
+        
+        // --- E: Update the user's stats in Firestore ---
+        await updateDoc(userStatsRef, {
+          currentXp,
+          level,
+          xpToNextLevel
+        });
+      }
+      
+      // --- F: Finally, toggle the task's completion status ---
       await updateDoc(taskRef, {
         isComplete: !task.isComplete
       });
+      
+      // If we are *un-completing* a task, we should probably remove the XP...
+      // but for V1, let's keep it simple. We won't remove XP.
+
     } catch (error) {
-      console.error('Error updating task:', error);
+      console.error('Error updating task/XP:', error);
     }
   };
 
