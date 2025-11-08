@@ -1,32 +1,63 @@
-import { Link, useRouter } from 'expo-router';
+import { Link, useRouter } from 'expo-router'; // 1. Import useRouter
 import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 import React, { useState } from 'react';
 import { Alert, Button, StyleSheet, Text, TextInput, View } from 'react-native';
-import { auth } from '../../firebase/config'; // Import your auth config
+import { auth, db } from '../../firebase/config'; 
 
 export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const router = useRouter();
+  const router = useRouter(); // 2. Initialize the router
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     if (!email || !password) {
       Alert.alert('Missing Info', 'Please enter both email and password.');
       return;
     }
 
-    createUserWithEmailAndPassword(auth, email, password)
-      .then((userCredential) => {
-        // Account created
-        console.log('User registered:', userCredential.user.email);
-        // AuthContext will detect this and navigate to (tabs)
-      })
-      .catch((error) => {
-        // Handle errors
-        Alert.alert('Registration Failed', error.message);
+    try {
+      // --- Step 1: Create the user in Firebase Auth ---
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      console.log('Step 1: User created in Auth');
+      
+      const user = userCredential.user;
+
+      // --- Step 2: Create the user stats doc in Firestore ---
+      const userDocRef = doc(db, 'users', user.uid);
+      
+      await setDoc(userDocRef, {
+        uid: user.uid,
+        email: user.email,
+        level: 1,
+        currentXp: 0,
+        xpToNextLevel: 100,
       });
+      console.log('Step 2: User stats doc created in Firestore');
+
+      // --- Step 3: Manually redirect AFTER both are successful ---
+      // This prevents the race condition.
+      router.replace('/(tabs)'); 
+      // The AuthContext will also pick this up, but this is more explicit.
+
+    } catch (error: any) {
+      // --- Error Handling ---
+      console.error('Registration failed:', error);
+
+      if (error.code === 'auth/email-already-in-use') {
+        Alert.alert('Registration Failed', 'That email address is already in use.');
+      } else if (error.code === 'auth/weak-password') {
+        Alert.alert('Registration Failed', 'Password should be at least 6 characters.');
+      } else if (error.code === 'permission-denied' || error.message.includes('firestore')) {
+        Alert.alert('Database Error', 'Failed to create user stats. Did you enable Firestore?');
+      } else {
+        Alert.alert('Registration Failed', `An error occurred: ${error.message}`);
+      }
+    }
   };
 
+  // ... rest of the file (return statement, styles) is the same
+  // (Paste the rest of your original file here)
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Register</Text>
