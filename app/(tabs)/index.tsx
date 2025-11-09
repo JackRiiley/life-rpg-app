@@ -13,7 +13,7 @@ import {
   writeBatch
 } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Button, FlatList, StyleSheet, Text, TextInput, View, Switch } from 'react-native';
+import { ActivityIndicator, Alert, Button, SectionList, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import TaskItem from '../../components/TaskItem';
 import Colours from '../../constants/Colours';
 import { useAuth } from '../../context/AuthContext'; // Import our auth hook
@@ -27,13 +27,20 @@ interface Task {
   xp: number;
   type: 'daily' | 'todo'; // <-- Add this line
 }
+interface ActiveQuest extends Task {
+    originalQuestId: string; // The ID from the 'questPool'
+  }
+
+type SectionTask = Task | ActiveQuest;
 
 export default function HomeScreen() {
   const { user } = useAuth(); // Get the logged-in user
   const [tasks, setTasks] = useState<Task[]>([]); // List of tasks
+  const [randomQuests, setRandomQuests] = useState<ActiveQuest[]>([]);
   const [newTaskTitle, setNewTaskTitle] = useState(''); // Text from the input
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [isDaily, setIsDaily] = useState(false);
+  
 
   // --- Combined Task Loading and Reset Logic ---
   useEffect(() => {
@@ -44,6 +51,7 @@ export default function HomeScreen() {
 
     // This will hold our real-time listener, so we can clean it up
     let unsubscribeFromTasks: () => void = () => {};
+    let unsubscribeFromDailies: () => void = () => {};
 
     // We define an async function inside the effect
     const setupTasksAndDailies = async () => {
@@ -84,8 +92,39 @@ export default function HomeScreen() {
           // 3. Also update the user's lastResetDate to today
           batch.update(userStatsRef, { lastResetDate: today });
 
-          // 4. Commit all changes to the database
-          await batch.commit(); 
+          // --- NEW: Roll Random Dailies ---
+          
+          // 4. Clear out any old 'activeDailies' from yesterday
+          const oldDailiesQuery = query(collection(db, 'users', user.uid, 'activeDailies'));
+          const oldDailiesSnapshot = await getDocs(oldDailiesQuery);
+          oldDailiesSnapshot.docs.forEach(doc => batch.delete(doc.ref));
+
+          // 5. Fetch the entire quest pool
+          const poolSnapshot = await getDocs(collection(db, 'questPool'));
+          const questPool = poolSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+          // 6. Shuffle the pool and pick 3
+          // (This is a simple but effective shuffle)
+          const shuffled = questPool.sort(() => 0.5 - Math.random());
+          const newDailies = shuffled.slice(0, 3);
+
+          // 7. Add the 3 new quests to the user's subcollection
+          newDailies.forEach(quest => {
+            const newDailyRef = doc(collection(db, 'users', user.uid, 'activeDailies'));
+            batch.set(newDailyRef, {
+              ...quest,
+              isComplete: false,
+              type: 'daily', // Mark it as a daily
+              ownerId: user.uid, // Add for potential rule use
+              originalQuestId: quest.id
+            });
+          });
+          
+          console.log(`Rolled ${newDailies.length} new daily quests.`);
+          // --- End New Daily Logic ---
+
+          // 8. NOW we commit all changes (habits, new quests, reset date)
+          await batch.commit();
           
           // 5. NOW we show the alert, AFTER it's all done
           console.log('Dailies reset successfully.');
@@ -114,6 +153,18 @@ export default function HomeScreen() {
           console.log('Task list updated from snapshot.');
         });
 
+        // --- NEW: Attach listener for Random Daily Quests ---
+        const activeDailiesQuery = query(collection(db, 'users', user.uid, 'activeDailies'));
+        
+        unsubscribeFromDailies = onSnapshot(activeDailiesQuery, (snapshot) => {
+          const userDailies = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          } as ActiveQuest));
+          setRandomQuests(userDailies);
+          console.log('Random quest list updated from snapshot.');
+        });
+
       } catch (error) {
         console.error("Error during task setup/reset:", error);
         Alert.alert('Error', 'Could not load or reset your tasks.');
@@ -127,6 +178,7 @@ export default function HomeScreen() {
     return () => {
       console.log('Detaching task listener.');
       unsubscribeFromTasks(); // This stops the listener
+      unsubscribeFromDailies();
     };
     
   }, [user]); // Re-run this effect if the user changes
@@ -168,61 +220,68 @@ export default function HomeScreen() {
       }
     }
   };
+
+  // --- NEW Reusable XP Function ---
+  const grantXp = async (amount: number) => {
+    if (!user) return;
+    
+    const userStatsRef = doc(db, 'users', user.uid);
+    try {
+      const userDoc = await getDoc(userStatsRef);
+      if (!userDoc.exists()) {
+        console.error("User stats doc not found!");
+        return;
+      }
+      
+      let { currentXp, level, xpToNextLevel } = userDoc.data();
+      
+      currentXp += amount;
+      console.log(`+${amount} XP! New total: ${currentXp}`);
+
+      // Check for Level Up
+      if (currentXp >= xpToNextLevel) {
+        level += 1;
+        const remainingXp = currentXp - xpToNextLevel;
+        currentXp = remainingXp;
+        xpToNextLevel = Math.floor(xpToNextLevel * 1.5);
+
+        Alert.alert("LEVEL UP!", `You are now Level ${level}!`);
+      }
+      
+      // Update the user's stats in Firestore
+      await updateDoc(userStatsRef, {
+        currentXp,
+        level,
+        xpToNextLevel
+      });
+
+    } catch (error) {
+      console.error("Error granting XP:", error);
+    }
+  };
   
   // --- 3. Update Task (Toggle Complete) ---
-  const handleToggleComplete = async (task: Task) => { // Make sure your Task interface includes `xp: number`
+  const handleToggleComplete = async (task: Task) => {
     if (!user) return; // Can't do anything if there's no user
 
     const taskRef = doc(db, 'tasks', task.id);
-    const userStatsRef = doc(db, 'users', user.uid); // Get a ref to the user's stats doc
 
     try {
-      // --- A: Grant XP if we are completing the task ---
+      // Grant XP *only* if we are completing the task
       if (!task.isComplete) { 
-        // We are toggling *to* complete
-        
-        // --- B: Get the user's current stats ---
-        const userDoc = await getDoc(userStatsRef);
-        if (!userDoc.exists()) {
-          console.error("User stats doc not found!");
-          return;
-        }
-        
-        let { currentXp, level, xpToNextLevel } = userDoc.data();
-        
-        // --- C: Add the XP ---
-        const taskXp = task.xp || 20; // Default to 20 if xp not on task
-        currentXp += taskXp;
-        console.log(`+${taskXp} XP! New total: ${currentXp}`);
-
-        // --- D: Check for Level Up ---
-        if (currentXp >= xpToNextLevel) {
-          level += 1; // LEVEL UP!
-          const remainingXp = currentXp - xpToNextLevel; // Carry over XP
-          currentXp = remainingXp;
-          xpToNextLevel = Math.floor(xpToNextLevel * 1.5); // Increase next level's cost (e.g., 100, 150, 225)
-
-          Alert.alert("LEVEL UP!", `You are now Level ${level}!`);
-        }
-        
-        // --- E: Update the user's stats in Firestore ---
-        await updateDoc(userStatsRef, {
-          currentXp,
-          level,
-          xpToNextLevel
-        });
+        const taskXp = task.xp || 20;
+        await grantXp(taskXp); // <-- Use our new function
       }
       
-      // --- F: Finally, toggle the task's completion status ---
+      // Finally, toggle the task's completion status
       await updateDoc(taskRef, {
         isComplete: !task.isComplete
       });
       
-      // If we are *un-completing* a task, we should probably remove the XP...
-      // but for V1, let's keep it simple. We won't remove XP.
-
+      // Note: We won't remove XP if they un-complete it.
+      
     } catch (error) {
-      console.error('Error updating task/XP:', error);
+      console.error('Error updating task:', error);
     }
   };
 
@@ -236,6 +295,22 @@ export default function HomeScreen() {
     }
   };
 
+  // --- 5. Complete Random Quest ---
+  const handleCompleteRandomQuest = async (quest: ActiveQuest) => {
+    if (!user) return;
+
+    // 1. Grant the XP
+    await grantXp(quest.xp || 25); // Use the quest's XP value
+
+    // 2. Delete the quest from the user's 'activeDailies'
+    const questRef = doc(db, 'users', user.uid, 'activeDailies', quest.id);
+    try {
+      await deleteDoc(questRef);
+    } catch (error) {
+      console.error("Error completing random quest:", error);
+    }
+  };
+
   // Helper component to render each task in the list
   const renderTask = ({ item }: { item: Task }) => (
     <TaskItem
@@ -244,6 +319,18 @@ export default function HomeScreen() {
       onDelete={handleDeleteTask}           // Pass the function directly
   />
   );
+
+  // Combine our two lists into sections
+  const sections = [
+    {
+      title: 'Daily Quests',
+      data: randomQuests as SectionTask[], // Use the union type
+    },
+    {
+      title: 'Your Habits',
+      data: tasks as SectionTask[], // Use the union type
+    },
+  ];
 
   return (
     <View style={styles.container}>
@@ -277,15 +364,43 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* --- Task List --- */}
-      <FlatList
-        data={tasks}
-        renderItem={renderTask}
-        keyExtractor={item => item.id}
-        ListHeaderComponent={<Text style={styles.listHeader}>Today's Quests</Text>}
+      {/* --- Task Lists --- */}
+      <SectionList
+        sections={sections}
+        keyExtractor={(item) => item.id}
+        
+        // This is the new, single renderItem function
+        renderItem={({ item, section }) => {
+          
+          // Check which section this item belongs to
+          if (section.title === 'Daily Quests') {
+            // We know this is an ActiveQuest. We cast it for the handler.
+            const quest = item as ActiveQuest;
+            return (
+              <TaskItem
+                task={quest}
+                onToggleComplete={() => handleCompleteRandomQuest(quest)}
+                onDelete={async () => {}} // <-- FIX for Error 1 (added async)
+              />
+            );
+          }
+
+          // Otherwise, it's a "Your Habits" task
+          return (
+            <TaskItem
+              task={item} // 'item' is a Task, which is fine
+              onToggleComplete={handleToggleComplete}
+              onDelete={handleDeleteTask}
+            />
+          );
+        }}
+        
+        renderSectionHeader={({ section: { title, data } }) => (
+          // Only show the header if there is data in that section
+          data.length > 0 ? <Text style={styles.listHeader}>{title}</Text> : null
+        )}
         ListEmptyComponent={<Text style={styles.emptyListText}>No quests yet. Add one!</Text>}
-        // This adds a bit of space at the bottom of the list
-        contentContainerStyle={{ paddingBottom: 50 }} 
+        contentContainerStyle={{ paddingBottom: 50 }}
       />
     </View>
   );
