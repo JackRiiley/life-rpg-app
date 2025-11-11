@@ -1,7 +1,7 @@
 import { signOut } from 'firebase/auth';
-import { doc, onSnapshot } from 'firebase/firestore'; // Import onSnapshot
+import { doc, onSnapshot, updateDoc, increment } from 'firebase/firestore'; // Import onSnapshot
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, DimensionValue, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, DimensionValue, Pressable, StyleSheet, Text, View, Alert } from 'react-native';
 import Colours from '../../constants/Colours';
 import { useAuth } from '../../context/AuthContext';
 import { auth, db } from '../../firebase/config';
@@ -54,6 +54,38 @@ export default function ProfileScreen() {
     );
   }
 
+  // --- NEW: Handle Attribute Increase ---
+  const handleIncreaseAttribute = async (attribute: 'strength' | 'intellect' | 'stamina') => {
+    // We can only spend points if we have a user and stats
+    if (!user || !stats) return;
+
+    // Check if we have points to spend
+    if (stats.attributePoints <= 0) {
+      Alert.alert("No Points", "You don't have any attribute points to spend!");
+      return;
+    }
+
+    try {
+      const userStatsRef = doc(db, 'users', user.uid);
+
+      // We use dot notation to update a nested object field
+      const attributeKey = `attributes.${attribute}`;
+
+      // Use a transaction to safely update stats
+      await updateDoc(userStatsRef, {
+        [attributeKey]: increment(1),     // Increase the attribute (e.g., attributes.strength)
+        attributePoints: increment(-1), // Decrease available points
+      });
+
+      // The onSnapshot listener will automatically pick up this
+      // change and update the UI.
+
+    } catch (error) {
+      console.error("Error updating attribute:", error);
+      Alert.alert("Error", "Could not update your attribute.");
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Your Profile</Text>
@@ -64,16 +96,68 @@ export default function ProfileScreen() {
           <Text style={styles.email}>
             {stats.email}
           </Text>
-          <View style={styles.statsContainer}>
+
+          {/* --- Level & Rank --- */}
+          <View style={styles.levelRankContainer}>
             <Text style={styles.levelText}>Level {stats.level}</Text>
-            
-            {/* --- XP Progress Bar --- */}
-            <View style={styles.xpBarBackground}>
-              <View style={[styles.xpBarFill, { width: getXpBarWidth() }]} />
-            </View>
-            <Text style={styles.xpText}>
-              {stats.currentXp} / {stats.xpToNextLevel} XP
+            <Text style={styles.rankText}>Rank: {stats.rank}</Text>
+          </View>
+          
+          {/* --- XP Progress Bar --- */}
+          <View style={styles.xpBarBackground}>
+            <View style={[styles.xpBarFill, { width: getXpBarWidth() }]} />
+          </View>
+          <Text style={styles.xpText}>
+            {stats.currentXp} / {stats.xpToNextLevel} XP
+          </Text>
+
+          {/* --- Attribute Points --- */}
+          <View style={styles.pointsContainer}>
+            <Text style={styles.pointsText}>
+              Available Points: {stats.attributePoints}
             </Text>
+          </View>
+
+          {/* --- NEW: Attributes List --- */}
+          <View style={styles.attributesList}>
+            {/* STRENGTH */}
+            <View style={styles.attributeRow}>
+              <Text style={styles.attributeName}>💪 Strength</Text>
+              <Text style={styles.attributeValue}>{stats.attributes.strength}</Text>
+              <Pressable
+                style={styles.increaseButton}
+                onPress={() => handleIncreaseAttribute('strength')}
+                disabled={stats.attributePoints <= 0} // Disable if no points
+              >
+                <Text style={styles.increaseButtonText}>+</Text>
+              </Pressable>
+            </View>
+            
+            {/* INTELLECT */}
+            <View style={styles.attributeRow}>
+              <Text style={styles.attributeName}>🧠 Intellect</Text>
+              <Text style={styles.attributeValue}>{stats.attributes.intellect}</Text>
+              <Pressable
+                style={styles.increaseButton}
+                onPress={() => handleIncreaseAttribute('intellect')}
+                disabled={stats.attributePoints <= 0}
+              >
+                <Text style={styles.increaseButtonText}>+</Text>
+              </Pressable>
+            </View>
+
+            {/* STAMINA */}
+            <View style={styles.attributeRow}>
+              <Text style={styles.attributeName}>🏃 Stamina</Text>
+              <Text style={styles.attributeValue}>{stats.attributes.stamina}</Text>
+              <Pressable
+                style={styles.increaseButton}
+                onPress={() => handleIncreaseAttribute('stamina')}
+                disabled={stats.attributePoints <= 0}
+              >
+                <Text style={styles.increaseButtonText}>+</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       )}
@@ -156,5 +240,67 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  levelRankContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    width: '100%',
+  },
+  rankText: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: Colours.light.tint, // Use the accent color
+  },
+  pointsContainer: {
+    marginTop: 20,
+    padding: 10,
+    backgroundColor: '#f4f4f8', // A slightly different background
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  pointsText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colours.light.textSecondary,
+  },
+  attributesList: {
+    width: '100%',
+    marginTop: 15,
+  },
+  attributeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: Colours.light.border,
+  },
+  attributeName: {
+    fontSize: 18,
+    color: Colours.light.text,
+  },
+  attributeValue: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colours.light.text,
+    // This pushes the button to the right
+    flex: 1,
+    textAlign: 'right',
+    marginRight: 15,
+  },
+  increaseButton: {
+    backgroundColor: Colours.light.tint,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  increaseButtonText: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: 'bold',
+    lineHeight: 22, // Fixes vertical alignment
   },
 });

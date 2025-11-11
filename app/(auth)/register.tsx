@@ -33,6 +33,15 @@ export default function RegisterScreen() {
         currentXp: 0,
         xpToNextLevel: 100,
         lastResetDate: new Date().toISOString().split('T')[0], // Store as 'YYYY-MM-DD'
+
+        // --- V2 Attributes ---
+        attributePoints: 0, // No points to spend at level 1
+        attributes: {
+          strength: 1,
+          intellect: 1,
+          stamina: 1,
+          // Start all stats at 1
+        }
       });
       console.log('Step 2: User stats doc created in Firestore');
 
