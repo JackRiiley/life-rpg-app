@@ -1,15 +1,6 @@
 import React, { useState } from 'react';
 import { ActivityIndicator, Button, Pressable, StyleSheet, Text, View } from 'react-native';
-
-// We'll re-define the Task interface here for this component's props
-// In a larger app, we'd put this in a central 'types.ts' file
-interface Task {
-  id: string;
-  title: string;
-  isComplete: boolean;
-  xp: number;
-  type: 'daily' | 'todo';
-}
+import { Task } from '../types';
 
 // Define the props our component will accept
 type TaskItemProps = {

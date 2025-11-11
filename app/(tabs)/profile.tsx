@@ -5,14 +5,7 @@ import { ActivityIndicator, DimensionValue, Pressable, StyleSheet, Text, View } 
 import Colours from '../../constants/Colours';
 import { useAuth } from '../../context/AuthContext';
 import { auth, db } from '../../firebase/config';
-
-// Define the shape of our User's Stats
-interface UserStats {
-  level: number;
-  currentXp: number;
-  xpToNextLevel: number;
-  email: string;
-}
+import { UserStats } from '../../types';
 
 export default function ProfileScreen() {
   const { user } = useAuth(); // Get the current user object

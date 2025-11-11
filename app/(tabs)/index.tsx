@@ -18,20 +18,7 @@ import Colours from '../../constants/Colours';
 import { useAuth } from '../../context/AuthContext'; // Import our auth hook
 import { db } from '../../firebase/config'; // Import our db
 import { grantXp } from '../../services/gameLogic';
-
-// Define the shape of a Task object
-interface Task {
-  id: string;
-  title: string;
-  isComplete: boolean;
-  xp: number;
-  type: 'daily' | 'todo'; // <-- Add this line
-}
-interface ActiveQuest extends Task {
-    originalQuestId: string; // The ID from the 'questPool'
-  }
-
-type SectionTask = Task | ActiveQuest;
+import { ActiveQuest, SectionTask, Task } from '../../types';
 
 export default function HomeScreen() {
   const { user } = useAuth(); // Get the logged-in user
