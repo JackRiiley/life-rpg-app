@@ -35,6 +35,7 @@ export interface UserStats {
   xpToNextLevel: number;
   lastResetDate: string;
   coins: number;
+  selectedTitle: string;
 
   // --- V2 Attributes ---
   attributePoints: number; // Points to spend on level up
@@ -45,5 +46,47 @@ export interface UserStats {
     stamina: number;
     // We can add more later
   };
-  // We will add 'attributes' here later
+
+  progress: {
+    tasksCompleted: number;
+    totalCoinsEarned: number;
+    // We can add bossesDefeated, etc. later
+  };
+}
+
+export type ProgressStat = 'tasksCompleted' | 'totalCoinsEarned';
+
+export interface Achievement {
+  title: string;
+  description: string;
+  unlockedTitle: string;
+  statToTrack: 'level' | ProgressStat; // The stat to check
+  unlockThreshold: number;
+}
+
+/**
+ * Represents a single task (attack) linked to a Boss.
+ */
+export interface BossAttack {
+  id: string;
+  title: string;
+  damage: number;
+  xp: number;
+  coins: number;
+  isComplete: boolean;
+  attribute: 'strength' | 'intellect' | 'stamina';
+}
+
+/**
+ * Represents a large project (Boss) in the 'bosses' collection.
+ */
+export interface Boss {
+  id: string;
+  ownerId: string;
+  name: string;
+  totalHp: number;
+  currentHp: number;
+  isComplete: boolean;
+  // We'll add the list of attacks from the subcollection
+  attacks: BossAttack[];
 }

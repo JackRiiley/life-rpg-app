@@ -44,6 +44,8 @@ function RootLayoutNav() {
       {/* These Stack.Screen components define the "groups" */}
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+      <Stack.Screen name="create-boss" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="create-attack" options={{ presentation: 'modal' }} />
     </Stack>
   );
 }
