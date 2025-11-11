@@ -1,5 +1,4 @@
 import {
-  addDoc,
   collection,
   deleteDoc,
   doc,
@@ -7,17 +6,18 @@ import {
   getDocs,
   onSnapshot,
   query,
-  Timestamp,
   updateDoc,
   where,
   writeBatch
 } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Button, SectionList, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Alert, SectionList, StyleSheet, Text, View } from 'react-native';
+import { AddTaskForm } from '../../components/AddTaskForm';
 import TaskItem from '../../components/TaskItem';
 import Colours from '../../constants/Colours';
 import { useAuth } from '../../context/AuthContext'; // Import our auth hook
 import { db } from '../../firebase/config'; // Import our db
+import { grantXp } from '../../services/gameLogic';
 
 // Define the shape of a Task object
 interface Task {
@@ -37,9 +37,6 @@ export default function HomeScreen() {
   const { user } = useAuth(); // Get the logged-in user
   const [tasks, setTasks] = useState<Task[]>([]); // List of tasks
   const [randomQuests, setRandomQuests] = useState<ActiveQuest[]>([]);
-  const [newTaskTitle, setNewTaskTitle] = useState(''); // Text from the input
-  const [isAddingTask, setIsAddingTask] = useState(false);
-  const [isDaily, setIsDaily] = useState(false);
   
 
   // --- Combined Task Loading and Reset Logic ---
@@ -182,83 +179,6 @@ export default function HomeScreen() {
     };
     
   }, [user]); // Re-run this effect if the user changes
-
-  // --- 2. Create Task ---
-  const handleAddTask = async () => {
-    if (newTaskTitle.trim() === '') {
-      Alert.alert('Empty Task', 'Please enter a task title.');
-      return;
-    }
-
-    if (!user) return; // Can't add if no user
-
-    setIsAddingTask(true);
-
-    if (user) {
-      try {
-        const difficulty = 'easy';
-        const xpValue = 20;
-        const taskType = isDaily ? 'daily' : 'todo';
-
-        // Add a new document to the 'tasks' collection
-        await addDoc(collection(db, 'tasks'), {
-          title: newTaskTitle,
-          isComplete: false,
-          ownerId: user.uid,
-          createdAt: Timestamp.now(), // Good for sorting later
-          difficulty: difficulty,
-          xp: xpValue,
-          type: taskType // Set the task type
-        });
-        setNewTaskTitle(''); // Clear the input field
-        setIsDaily(false);
-      } catch (error) {
-        console.error('Error adding task:', error);
-        Alert.alert('Error', 'Could not add task.');
-      } finally {
-        setIsAddingTask(false);
-      }
-    }
-  };
-
-  // --- NEW Reusable XP Function ---
-  const grantXp = async (amount: number) => {
-    if (!user) return;
-    
-    const userStatsRef = doc(db, 'users', user.uid);
-    try {
-      const userDoc = await getDoc(userStatsRef);
-      if (!userDoc.exists()) {
-        console.error("User stats doc not found!");
-        return;
-      }
-      
-      let { currentXp, level, xpToNextLevel } = userDoc.data();
-      
-      currentXp += amount;
-      console.log(`+${amount} XP! New total: ${currentXp}`);
-
-      // Check for Level Up
-      if (currentXp >= xpToNextLevel) {
-        level += 1;
-        const remainingXp = currentXp - xpToNextLevel;
-        currentXp = remainingXp;
-        xpToNextLevel = Math.floor(xpToNextLevel * 1.5);
-
-        Alert.alert("LEVEL UP!", `You are now Level ${level}!`);
-      }
-      
-      // Update the user's stats in Firestore
-      await updateDoc(userStatsRef, {
-        currentXp,
-        level,
-        xpToNextLevel
-      });
-
-    } catch (error) {
-      console.error("Error granting XP:", error);
-    }
-  };
   
   // --- 3. Update Task (Toggle Complete) ---
   const handleToggleComplete = async (task: Task) => {
@@ -270,7 +190,7 @@ export default function HomeScreen() {
       // Grant XP *only* if we are completing the task
       if (!task.isComplete) { 
         const taskXp = task.xp || 20;
-        await grantXp(taskXp); // <-- Use our new function
+        await grantXp(user.uid, taskXp); // <-- Use our new function
       }
       
       // Finally, toggle the task's completion status
@@ -300,7 +220,7 @@ export default function HomeScreen() {
     if (!user) return;
 
     // 1. Grant the XP
-    await grantXp(quest.xp || 25); // Use the quest's XP value
+    await await grantXp(user.uid, quest.xp || 25); // Use the quest's XP value
 
     // 2. Delete the quest from the user's 'activeDailies'
     const questRef = doc(db, 'users', user.uid, 'activeDailies', quest.id);
@@ -337,32 +257,7 @@ export default function HomeScreen() {
       <Text style={styles.title}>Your Quests</Text>
       
       {/* --- Add Task Form --- */}
-      <View style={styles.formContainer}>
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder="Add a new quest..."
-            value={newTaskTitle}
-            onChangeText={setNewTaskTitle}
-            editable={!isAddingTask} // Disable input while loading
-          />
-          {/* Show spinner OR button */}
-          {isAddingTask ? (
-            <ActivityIndicator style={styles.addSpinner} />
-          ) : (
-            <Button title="Add" onPress={handleAddTask} disabled={isAddingTask} />
-          )}
-        </View>
-        <View style={styles.switchContainer}>
-          <Text style={styles.switchLabel}>Make it a Daily Quest?</Text>
-          <Switch
-            trackColor={{ false: '#767577', true: '#81b0ff' }}
-            thumbColor={isDaily ? '#f5dd4b' : '#f4f3f4'}
-            onValueChange={setIsDaily}
-            value={isDaily}
-          />
-        </View>
-      </View>
+      <AddTaskForm />
 
       {/* --- Task Lists --- */}
       <SectionList
@@ -419,47 +314,6 @@ const styles = StyleSheet.create({
     color: Colours.light.text,
     marginBottom: 20,
     marginTop: 40, // Add space at the top
-  },
-  // --- New Form Styles ---
-  formContainer: {
-    backgroundColor: Colours.light.card,
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    marginBottom: 10,
-  },
-  input: {
-    flex: 1,
-    height: 44, // Taller input
-    borderColor: Colours.light.border,
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingLeft: 10,
-    marginRight: 8,
-    fontSize: 16,
-    color: Colours.light.text,
-  },
-  addSpinner: {
-    paddingHorizontal: 16,
-  },
-  switchContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 5,
-    marginTop: 5,
-  },
-  switchLabel: {
-    fontSize: 16,
-    color: Colours.light.textSecondary,
   },
   // --- List Header ---
   listHeader: {
