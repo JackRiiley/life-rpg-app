@@ -34,10 +34,11 @@ export interface UserStats {
   currentXp: number;
   xpToNextLevel: number;
   lastResetDate: string;
+  coins: number;
 
   // --- V2 Attributes ---
   attributePoints: number; // Points to spend on level up
-  rank: string, // Player's rank based on level
+  rank: string; // Player's rank based on level
   attributes: {
     strength: number;
     intellect: number;

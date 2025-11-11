@@ -4,10 +4,13 @@ import { db } from '../firebase/config'; // Import your db config
 import { UserStats } from '../types';
 
 /**
- * Grants a specified amount of XP to a user and handles level-ups.
+ * Grants XP and Coins to a user and handles level-ups.
+ * @param userId The UID of the user.
+ * @param xpAmount The amount of XP to grant.
+ * @param coinAmount The amount of Coins to grant.
  */
-export const grantXp = async (userId: string, amount: number) => {
-  if (!userId || amount <= 0) return;
+export const grantRewards = async (userId: string, xpAmount: number, coinAmount: number) => {
+  if (!userId) return;
 
   const userStatsRef = doc(db, 'users', userId);
   try {
@@ -17,51 +20,51 @@ export const grantXp = async (userId: string, amount: number) => {
       return;
     }
     
-    // We cast the data to our new type
     let stats = userDoc.data() as UserStats;
-
-    stats.currentXp += amount;
-    console.log(`+${amount} XP! New total: ${stats.currentXp}`);
-
     let leveledUp = false;
 
-    // --- UPDATED LEVEL UP LOGIC ---
-    if (stats.currentXp >= stats.xpToNextLevel) {
-      leveledUp = true;
-      stats.level += 1; // Increment level
-      
-      // Carry over remaining XP
-      const remainingXp = stats.currentXp - stats.xpToNextLevel;
-      stats.currentXp = remainingXp;
-      
-      // Calculate new XP required
-      stats.xpToNextLevel = Math.floor(stats.xpToNextLevel * 1.5);
-      
-      // --- NEW V2 LOGIC ---
-      stats.attributePoints += 1; // Grant 1 attribute point
-      stats.rank = getRank(stats.level); // Calculate new Rank
-      
-      Alert.alert(
-        "LEVEL UP!",
-        `You are now Level ${stats.level} (Rank ${stats.rank})!\n\nYou have 1 new attribute point to spend.`
-      );
+    // --- Grant XP & Handle Level Up ---
+    if (xpAmount > 0) {
+      stats.currentXp += xpAmount;
+      console.log(`+${xpAmount} XP! New total: ${stats.currentXp}`);
+
+      if (stats.currentXp >= stats.xpToNextLevel) {
+        leveledUp = true;
+        stats.level += 1;
+        const remainingXp = stats.currentXp - stats.xpToNextLevel;
+        stats.currentXp = remainingXp;
+        stats.xpToNextLevel = Math.floor(stats.xpToNextLevel * 1.5);
+        stats.attributePoints += 1;
+        stats.rank = getRank(stats.level);
+        
+        Alert.alert(
+          "LEVEL UP!",
+          `You are now Level ${stats.level} (Rank ${stats.rank})!\n\nYou have 1 new attribute point to spend.`
+        );
+      }
+    }
+
+    // --- Grant Coins ---
+    if (coinAmount > 0) {
+      const currentCoins = (stats.coins && !isNaN(stats.coins)) ? stats.coins : 0;
+      stats.coins = currentCoins + coinAmount;
+      console.log(`+${coinAmount} Coins! New total: ${stats.coins}`);
     }
     
     // --- UPDATE FIRESTORE ---
-    // We update only the fields that can change
     await updateDoc(userStatsRef, {
       currentXp: stats.currentXp,
-      level: stats.level,
-      xpToNextLevel: stats.xpToNextLevel,
-      // Only update these if a level-up occurred
-      ...(leveledUp && {
+      coins: stats.coins, // Add coins to the update
+      ...(leveledUp && { // Only update these if a level-up occurred
+        level: stats.level,
+        xpToNextLevel: stats.xpToNextLevel,
         attributePoints: stats.attributePoints,
         rank: stats.rank,
       })
     });
 
   } catch (error) {
-    console.error("Error granting XP:", error);
+    console.error("Error granting rewards:", error);
   }
 };
 

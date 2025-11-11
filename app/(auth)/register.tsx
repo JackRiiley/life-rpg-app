@@ -33,6 +33,8 @@ export default function RegisterScreen() {
         currentXp: 0,
         xpToNextLevel: 100,
         lastResetDate: new Date().toISOString().split('T')[0], // Store as 'YYYY-MM-DD'
+        coins: 0,
+        rank: 'E',
 
         // --- V2 Attributes ---
         attributePoints: 0, // No points to spend at level 1

@@ -1,7 +1,7 @@
 import { signOut } from 'firebase/auth';
-import { doc, onSnapshot, updateDoc, increment } from 'firebase/firestore'; // Import onSnapshot
+import { doc, increment, onSnapshot, updateDoc } from 'firebase/firestore'; // Import onSnapshot
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, DimensionValue, Pressable, StyleSheet, Text, View, Alert } from 'react-native';
+import { ActivityIndicator, Alert, DimensionValue, Pressable, StyleSheet, Text, View } from 'react-native';
 import Colours from '../../constants/Colours';
 import { useAuth } from '../../context/AuthContext';
 import { auth, db } from '../../firebase/config';
@@ -101,6 +101,11 @@ export default function ProfileScreen() {
           <View style={styles.levelRankContainer}>
             <Text style={styles.levelText}>Level {stats.level}</Text>
             <Text style={styles.rankText}>Rank: {stats.rank}</Text>
+          </View>
+
+          {/* --- NEW: Coins Display --- */}
+          <View style={styles.coinContainer}>
+            <Text style={styles.coinText}>💰 {stats.coins} Coins</Text>
           </View>
           
           {/* --- XP Progress Bar --- */}
@@ -302,5 +307,14 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     lineHeight: 22, // Fixes vertical alignment
+  },
+  coinContainer: {
+    alignItems: 'flex-end',
+    marginTop: 8,
+  },
+  coinText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#E6A700', // A nice gold color
   },
 });
