@@ -19,6 +19,7 @@ import { useAuth } from '../../context/AuthContext'; // Import our auth hook
 import { db } from '../../firebase/config'; // Import our db
 import { grantRewards } from '../../services/gameLogic';
 import { ActiveQuest, SectionTask, Task } from '../../types';
+import { updateProgress } from '../../services/achievementService';
 
 export default function HomeScreen() {
   const { user } = useAuth(); // Get the logged-in user
@@ -178,6 +179,7 @@ export default function HomeScreen() {
       if (!task.isComplete) { 
         const taskXp = task.xp || 20;
         await grantRewards(user.uid, taskXp, 5); // 20 XP (from taskXp) and 5 Coins // <-- Use our new function
+        await updateProgress(user.uid, 'tasksCompleted', 1);
       }
       
       // Finally, toggle the task's completion status
@@ -208,6 +210,7 @@ export default function HomeScreen() {
 
     // 1. Grant the XP
     await grantRewards(user.uid, quest.xp || 25, 10); // Use the quest's XP value
+    await updateProgress(user.uid, 'tasksCompleted', 1);
 
     // 2. Delete the quest from the user's 'activeDailies'
     const questRef = doc(db, 'users', user.uid, 'activeDailies', quest.id);

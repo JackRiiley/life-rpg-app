@@ -35,6 +35,7 @@ export default function RegisterScreen() {
         lastResetDate: new Date().toISOString().split('T')[0], // Store as 'YYYY-MM-DD'
         coins: 0,
         rank: 'E',
+        selectedTitle: 'Newbie',
 
         // --- V2 Attributes ---
         attributePoints: 0, // No points to spend at level 1
@@ -43,6 +44,10 @@ export default function RegisterScreen() {
           intellect: 1,
           stamina: 1,
           // Start all stats at 1
+        },
+        progress: {
+          tasksCompleted: 0,
+          totalCoinsEarned: 0,
         }
       });
       console.log('Step 2: User stats doc created in Firestore');

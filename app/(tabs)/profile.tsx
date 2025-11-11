@@ -97,6 +97,11 @@ export default function ProfileScreen() {
             {stats.email}
           </Text>
 
+          {/* --- NEW: Title Display --- */}
+          <View style={styles.titleContainer}>
+            <Text style={styles.titleText}>"{stats.selectedTitle}"</Text>
+          </View>
+
           {/* --- Level & Rank --- */}
           <View style={styles.levelRankContainer}>
             <Text style={styles.levelText}>Level {stats.level}</Text>
@@ -316,5 +321,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#E6A700', // A nice gold color
+  },
+  titleContainer: {
+    width: '100%',
+    alignItems: 'center', // Center the title
+    marginBottom: 15, // Add space below it
+  },
+  titleText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colours.light.tint, // Use the accent color
+    fontStyle: 'italic',
   },
 });
