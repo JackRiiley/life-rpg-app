@@ -78,16 +78,19 @@ export default function BossDetailScreen() {
       }
       const stats = userDoc.data() as UserStats;
 
-      // --- 2. Calculate Bonus Damage ---
-      // Simple formula: +5 damage for each point in the matching attribute.
+      // --- 2. Calculate Bonus Damage (USING baseDamage) ---
+      // Get the attack's 'baseDamage' and 'attribute'
+      const baseDamage = attack.baseDamage || 20; // Default to 20 if 0
       const attributeName = attack.attribute;
-      const bonusDamage = (stats.attributes[attributeName] || 0) * 5;
-      const totalDamage = attack.damage + bonusDamage;
+      
+      // Calculate bonus
+      const attributeLevel = stats.attributes[attributeName] || 1; // Default to 1
+      const bonusDamage = (attributeLevel * 5); // e.g., (1 Str * 5) = 5 bonus
+      const totalDamage = baseDamage + bonusDamage;
 
-      console.log(`Base Damage: ${attack.damage}, Bonus: ${bonusDamage}, Total: ${totalDamage}`);
+      console.log(`Base Damage: ${baseDamage}, Bonus: ${bonusDamage}, Total: ${totalDamage}`);
 
       // --- 3. Grant Rewards (XP & Coins) ---
-      // We do this *before* the batch
       await grantRewards(user.uid, attack.xp, attack.coins);
       await updateProgress(user.uid, 'tasksCompleted', 1);
 
@@ -132,7 +135,7 @@ export default function BossDetailScreen() {
         // Show a simple alert
         Alert.alert(
           "Attack Landed!",
-          `You dealt ${attack.damage} base damage + ${bonusDamage} attribute bonus for ${totalDamage} total damage!`
+          `You dealt ${baseDamage} base damage + ${bonusDamage} attribute bonus for ${totalDamage} total damage!`
         );
       }
       
@@ -180,12 +183,11 @@ export default function BossDetailScreen() {
             task={{
               id: item.id,
               title: item.title,
-              xp: item.xp,
-              type: 'todo', // Just to satisfy the type
-              isComplete: item.isComplete, // <-- Use the real value
+              xp: item.xp, // This is the XP we calculated, which is correct
+              type: 'todo',
+              isComplete: item.isComplete,
             }}
             onToggleComplete={() => handleCompleteAttack(item)}
-            // Pass an async no-op function to satisfy the type
             onDelete={async () => {
               Alert.alert("Not Yet", "Delete functionality coming soon!");
             }}

@@ -70,7 +70,7 @@ export interface Achievement {
 export interface BossAttack {
   id: string;
   title: string;
-  damage: number;
+  baseDamage: number;
   xp: number;
   coins: number;
   isComplete: boolean;

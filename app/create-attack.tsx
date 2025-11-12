@@ -1,9 +1,9 @@
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { addDoc, collection } from 'firebase/firestore';
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Alert, ActivityIndicator } from 'react-native';
-import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
-import { addDoc, collection, Timestamp } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { ActivityIndicator, Alert, Button, StyleSheet, Text, TextInput, View } from 'react-native';
 import Colours from '../constants/Colours';
+import { db } from '../firebase/config';
 // We'll add a simple Picker for the attribute
 // You may need to install this: npx expo install @react-native-picker/picker
 // import { Picker } from '@react-native-picker/picker'; 
@@ -15,7 +15,6 @@ export default function CreateAttackScreen() {
   const { bossId } = useLocalSearchParams<{ bossId: string }>();
 
   const [title, setTitle] = useState('');
-  const [damage, setDamage] = useState('');
   const [attribute, setAttribute] = useState('strength'); // Default to strength
   const [loading, setLoading] = useState(false);
 
@@ -24,20 +23,21 @@ export default function CreateAttackScreen() {
       Alert.alert("Error", "No boss ID found.");
       return;
     }
-
-    const damageNum = parseInt(damage);
-    if (title.trim() === '' || isNaN(damageNum) || damageNum <= 0) {
-      Alert.alert('Invalid Input', 'Please enter a valid title and positive damage amount.');
+    
+    // Standardize the attribute input
+    const validAttribute = attribute || 'strength';
+    if (title.trim() === '' || !['strength', 'intellect', 'stamina'].includes(validAttribute)) {
+      Alert.alert('Invalid Input', 'Please enter a valid title and attribute (strength, intellect, stamina).');
       return;
     }
 
     setLoading(true);
 
     // --- NEW: Auto-calculate Rewards ---
-    // Simple logic: XP is ~1/5 of damage, Coins are ~1/20
-    const xpNum = Math.floor(damageNum / 5) + 10; // e.g., 100 damage = 30 XP
-    const coinsNum = Math.floor(damageNum / 20) + 5; // e.g., 100 damage = 10 Coins
-    // This provides a simple, balanced reward curve.
+    // All attacks have the same base power and rewards
+    const baseDamage = 20; 
+    const xpNum = Math.floor(baseDamage / 5) + 10; // 14 XP
+    const coinsNum = Math.floor(baseDamage / 20) + 5; // 6 Coins
     // --- END NEW LOGIC ---
 
     try {
@@ -45,10 +45,10 @@ export default function CreateAttackScreen() {
       const attacksRef = collection(db, 'bosses', bossId, 'attacks');
       await addDoc(attacksRef, {
         title: title.trim(),
-        damage: damageNum,
-        xp: xpNum, // Use the calculated value
-        coins: coinsNum, // Use the calculated value
-        attribute: attribute.toLowerCase().trim() || 'strength',
+        baseDamage: baseDamage, // Save baseDamage
+        xp: xpNum,
+        coins: coinsNum,
+        attribute: validAttribute,
         isComplete: false,
       });
       
@@ -73,21 +73,12 @@ export default function CreateAttackScreen() {
         onChangeText={setTitle}
       />
 
-      <Text style={styles.label}>HP Damage</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="e.g., 150"
-        value={damage}
-        onChangeText={setDamage}
-        keyboardType="number-pad"
-      />
-
       <Text style={styles.label}>Attribute (strength, intellect, stamina)</Text>
       <TextInput
         style={styles.input}
         placeholder="strength"
         value={attribute}
-        onChangeText={setAttribute}
+        onChangeText={(text) => setAttribute(text.toLowerCase().trim())}
         autoCapitalize="none"
       />
 
