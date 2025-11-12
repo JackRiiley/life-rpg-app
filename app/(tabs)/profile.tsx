@@ -181,6 +181,18 @@ export default function ProfileScreen() {
     fontSize: 16,
     fontWeight: '600',
   },
+  changeTitleButton: {
+    backgroundColor: theme.tint, // Blue
+    padding: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginBottom: 10, // Space between buttons
+  },
+  changeTitleButtonText: { 
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });
 
   // --- 1. Listen for real-time stats updates ---
@@ -343,6 +355,10 @@ export default function ProfileScreen() {
         </View>
       )}
 
+      <Pressable style={styles.changeTitleButton} onPress={() => router.push('/select-title')}>
+        <Text style={styles.changeTitleButtonText}>Change Title</Text>
+      </Pressable>
+      {/* --- Change Theme Button --- */} 
       <Pressable style={styles.changeThemeButton} onPress={() => router.push('/select-theme')}>
         <Text style={styles.changeThemeButtonText}>Change Theme</Text>
       </Pressable>

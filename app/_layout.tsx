@@ -48,6 +48,7 @@ function RootLayoutNav() {
       <Stack.Screen name="create-boss" options={{ presentation: 'modal' }} />
       <Stack.Screen name="select-theme" options={{ presentation: 'modal' }} />
       <Stack.Screen name="create-attack" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="select-title" options={{ presentation: 'modal' }} />
       <Stack.Screen name="boss" options={{ headerShown: false }} />
     </Stack>
   );
