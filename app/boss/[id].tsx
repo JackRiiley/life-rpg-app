@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Button, FlatList, StyleSheet, Text, View } from 'react-native';
 import Colours from '../../constants/Colours';
 import { db } from '../../firebase/config';
-import { Boss, BossAttack } from '../../types';
+import { Boss, BossAttack, UserStats } from '../../types';
 // We'll re-use our TaskItem component to display attacks!
 import TaskItem from '../../components/TaskItem';
 import { useAuth } from '../../context/AuthContext';
