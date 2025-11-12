@@ -2,6 +2,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import React, { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native'; // We'll add a loading spinner
 import { AuthProvider, useAuth } from '../context/AuthContext';
+import { ThemeProvider } from '../context/ThemeContext';
 
 // This new component contains the core auth-based routing logic
 function RootLayoutNav() {
@@ -45,7 +46,9 @@ function RootLayoutNav() {
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="create-boss" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="select-theme" options={{ presentation: 'modal' }} />
       <Stack.Screen name="create-attack" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="boss" options={{ headerShown: false }} />
     </Stack>
   );
 }
@@ -55,7 +58,9 @@ function RootLayoutNav() {
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <RootLayoutNav />
+      <ThemeProvider>
+        <RootLayoutNav />
+      </ThemeProvider>
     </AuthProvider>
   );
 }

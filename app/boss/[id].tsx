@@ -2,7 +2,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { collection, doc, getDoc, increment, onSnapshot, writeBatch } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Button, FlatList, StyleSheet, Text, View } from 'react-native';
-import Colours from '../../constants/Colours';
+import {useTheme } from '../context/ThemeContext';
 import { db } from '../../firebase/config';
 import { Boss, BossAttack, UserStats } from '../../types';
 // We'll re-use our TaskItem component to display attacks!
@@ -16,10 +16,76 @@ export default function BossDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const router = useRouter();
+  const { theme } = useTheme();
   
   const [boss, setBoss] = useState<Boss | null>(null);
   const [attacks, setAttacks] = useState<BossAttack[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // --- Styles (many are re-used) ---
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      padding: 20,
+      backgroundColor: theme.background,
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: 'bold',
+      color: theme.text,
+    },
+    listHeader: {
+      fontSize: 22,
+      fontWeight: '600',
+      color: theme.text,
+      marginBottom: 10,
+      marginTop: 20,
+    },
+    emptyText: {
+      textAlign: 'center',
+      marginTop: 30,
+      color: theme.textSecondary,
+      fontSize: 16,
+    },
+    bossCard: {
+      backgroundColor: theme.card,
+      borderRadius: 12,
+      padding: 20,
+      marginBottom: 15,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    bossName: {
+      fontSize: 20,
+      fontWeight: '600',
+      color: theme.text,
+    },
+    hpBarBackground: {
+      width: '100%',
+      height: 10,
+      backgroundColor: theme.border,
+      borderRadius: 5,
+      marginTop: 15,
+      overflow: 'hidden',
+    },
+    hpBarFill: {
+      height: '100%',
+      backgroundColor: '#FF3B30', // Red for HP
+      borderRadius: 5,
+    },
+    hpText: {
+      textAlign: 'right',
+      fontSize: 14,
+      color: theme.textSecondary,
+      marginTop: 5,
+    },
+    buttonContainer: {
+      marginTop: 20,
+    },
+  });
 
   useEffect(() => {
     if (!id) return;
@@ -203,68 +269,3 @@ export default function BossDetailScreen() {
     </View>
   );
 }
-
-// --- Styles (many are re-used) ---
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: Colours.light.background,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: Colours.light.text,
-  },
-  listHeader: {
-    fontSize: 22,
-    fontWeight: '600',
-    color: Colours.light.text,
-    marginBottom: 10,
-    marginTop: 20,
-  },
-  emptyText: {
-    textAlign: 'center',
-    marginTop: 30,
-    color: Colours.light.textSecondary,
-    fontSize: 16,
-  },
-  bossCard: {
-    backgroundColor: Colours.light.card,
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  bossName: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: Colours.light.text,
-  },
-  hpBarBackground: {
-    width: '100%',
-    height: 10,
-    backgroundColor: Colours.light.border,
-    borderRadius: 5,
-    marginTop: 15,
-    overflow: 'hidden',
-  },
-  hpBarFill: {
-    height: '100%',
-    backgroundColor: '#FF3B30', // Red for HP
-    borderRadius: 5,
-  },
-  hpText: {
-    textAlign: 'right',
-    fontSize: 14,
-    color: Colours.light.textSecondary,
-    marginTop: 5,
-  },
-  buttonContainer: {
-    marginTop: 20,
-  },
-});

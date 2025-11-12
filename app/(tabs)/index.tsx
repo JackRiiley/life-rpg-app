@@ -14,17 +14,47 @@ import React, { useEffect, useState } from 'react';
 import { Alert, SectionList, StyleSheet, Text, View } from 'react-native';
 import { AddTaskForm } from '../../components/AddTaskForm';
 import TaskItem from '../../components/TaskItem';
-import Colours from '../../constants/Colours';
 import { useAuth } from '../../context/AuthContext'; // Import our auth hook
+import { useTheme } from '../../context/ThemeContext';
 import { db } from '../../firebase/config'; // Import our db
+import { updateProgress } from '../../services/achievementService';
 import { grantRewards } from '../../services/gameLogic';
 import { ActiveQuest, SectionTask, Task } from '../../types';
-import { updateProgress } from '../../services/achievementService';
 
 export default function HomeScreen() {
   const { user } = useAuth(); // Get the logged-in user
+  const { theme } = useTheme(); // Get the current theme
   const [tasks, setTasks] = useState<Task[]>([]); // List of tasks
   const [randomQuests, setRandomQuests] = useState<ActiveQuest[]>([]);
+
+  // --- Styles ---
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      padding: 20,
+      backgroundColor: theme.background, // Use background color
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: 'bold',
+      color: theme.text,
+      marginBottom: 20,
+      marginTop: 40, // Add space at the top
+    },
+    // --- List Header ---
+    listHeader: {
+      fontSize: 22,
+      fontWeight: '600',
+      color: theme.text,
+      marginBottom: 10,
+    },
+    emptyListText: {
+      textAlign: 'center',
+      marginTop: 30,
+      color: theme.textSecondary,
+      fontSize: 16,
+    },
+  });
   
 
   // --- Combined Task Loading and Reset Logic ---
@@ -290,32 +320,3 @@ export default function HomeScreen() {
     </View>
   );
 }
-
-// --- Styles ---
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: Colours.light.background, // Use background color
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: Colours.light.text,
-    marginBottom: 20,
-    marginTop: 40, // Add space at the top
-  },
-  // --- List Header ---
-  listHeader: {
-    fontSize: 22,
-    fontWeight: '600',
-    color: Colours.light.text,
-    marginBottom: 10,
-  },
-  emptyListText: {
-    textAlign: 'center',
-    marginTop: 30,
-    color: Colours.light.textSecondary,
-    fontSize: 16,
-  },
-});

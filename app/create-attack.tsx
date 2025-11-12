@@ -2,7 +2,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { addDoc, collection } from 'firebase/firestore';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Button, StyleSheet, Text, TextInput, View } from 'react-native';
-import Colours from '../constants/Colours';
+import {useTheme } from '../context/ThemeContext';
 import { db } from '../firebase/config';
 // We'll add a simple Picker for the attribute
 // You may need to install this: npx expo install @react-native-picker/picker
@@ -11,12 +11,41 @@ import { db } from '../firebase/config';
 
 export default function CreateAttackScreen() {
   const router = useRouter();
+  const { theme } = useTheme();
   // Get the 'bossId' that we will pass from the previous screen
   const { bossId } = useLocalSearchParams<{ bossId: string }>();
 
   const [title, setTitle] = useState('');
   const [attribute, setAttribute] = useState('strength'); // Default to strength
   const [loading, setLoading] = useState(false);
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      padding: 20,
+      backgroundColor: theme.background,
+    },
+    label: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.text,
+      marginBottom: 8,
+      marginTop: 20,
+    },
+    input: {
+      height: 44,
+      borderColor: theme.border,
+      borderWidth: 1,
+      borderRadius: 8,
+      paddingLeft: 10,
+      fontSize: 16,
+      color: theme.text,
+      backgroundColor: theme.card,
+    },
+    buttonContainer: {
+      marginTop: 30,
+    },
+  });
 
   const handleCreate = async () => {
     if (!bossId) {
@@ -92,31 +121,3 @@ export default function CreateAttackScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: Colours.light.background,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colours.light.text,
-    marginBottom: 8,
-    marginTop: 20,
-  },
-  input: {
-    height: 44,
-    borderColor: Colours.light.border,
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingLeft: 10,
-    fontSize: 16,
-    color: Colours.light.text,
-    backgroundColor: Colours.light.card,
-  },
-  buttonContainer: {
-    marginTop: 30,
-  },
-});

@@ -1,6 +1,6 @@
 import { Link, useRouter } from 'expo-router'; // 1. Import useRouter
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, Timestamp } from 'firebase/firestore';
 import React, { useState } from 'react';
 import { Alert, Button, StyleSheet, Text, TextInput, View } from 'react-native';
 import { auth, db } from '../../firebase/config';
@@ -36,6 +36,7 @@ export default function RegisterScreen() {
         coins: 0,
         rank: 'E',
         selectedTitle: 'Newbie',
+        activeTheme: 'default_light', // Default theme
 
         // --- V2 Attributes ---
         attributePoints: 0, // No points to spend at level 1
@@ -51,6 +52,15 @@ export default function RegisterScreen() {
         }
       });
       console.log('Step 2: User stats doc created in Firestore');
+
+      const defaultItemRef = doc(db, 'users', user.uid, 'unlockedItems', 'default_light');
+      await setDoc(defaultItemRef, {
+        id: 'default_light',
+        name: 'Default Theme',
+        type: 'theme',
+        unlockedAt: Timestamp.now(), 
+      });
+      console.log('Step 2.5: Default items added');
 
       // --- Step 3: Manually redirect AFTER both are successful ---
       // This prevents the race condition.

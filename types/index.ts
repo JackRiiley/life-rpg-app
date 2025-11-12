@@ -1,6 +1,28 @@
 // This file will hold all common data structures for our app.
 
 /**
+ * Represents an item in the master 'shopItems' collection.
+ */
+export interface ShopItem {
+  id: string;
+  name: string;
+  cost: number;
+  type: 'theme';
+  isDefault?: boolean;
+}
+
+/**
+ * Represents an item a user has unlocked.
+ * Stored in 'users/{uid}/unlockedItems'
+ */
+export interface UnlockedItem {
+  id: string; // This will match the ShopItem id
+  name: string;
+  type: 'theme';
+  unlockedAt: Date;
+}
+
+/**
  * Represents a user-created task or habit.
  */
 export interface Task {
@@ -36,6 +58,7 @@ export interface UserStats {
   lastResetDate: string;
   coins: number;
   selectedTitle: string;
+  activeTheme: string;
 
   // --- V2 Attributes ---
   attributePoints: number; // Points to spend on level up

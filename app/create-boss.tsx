@@ -2,7 +2,7 @@ import { Stack, useRouter } from 'expo-router';
 import { addDoc, collection, doc, getDoc, Timestamp } from 'firebase/firestore';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Button, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import Colours from '../constants/Colours';
+import {useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase/config';
 import { UserStats } from '../types';
@@ -10,9 +10,68 @@ import { UserStats } from '../types';
 export default function CreateBossScreen() {
   const { user } = useAuth();
   const router = useRouter();
+  const { theme } = useTheme();
   const [name, setName] = useState('');
   const [selectedDifficulty, setSelectedDifficulty] = useState('easy');
   const [loading, setLoading] = useState(false);
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      padding: 20,
+      backgroundColor: theme.background,
+    },
+    label: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.text,
+      marginBottom: 8,
+      marginTop: 20,
+    },
+    input: {
+      height: 44,
+      borderColor: theme.border,
+      borderWidth: 1,
+      borderRadius: 8,
+      paddingLeft: 10,
+      fontSize: 16,
+      color: theme.text,
+      backgroundColor: theme.card,
+    },
+    buttonContainer: {
+      marginTop: 30,
+    },
+    difficultyContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginTop: 10,
+    },
+    difficultyButton: {
+      flex: 1,
+      padding: 12,
+      borderRadius: 8,
+      borderWidth: 2,
+      borderColor: theme.border,
+      alignItems: 'center',
+      marginHorizontal: 5,
+    },
+    difficultyButtonText: {
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    easySelected: {
+      borderColor: '#34C759', // Green
+      backgroundColor: '#34c75920',
+    },
+    mediumSelected: {
+      borderColor: '#FF9500', // Orange
+      backgroundColor: '#ff950020',
+    },
+    hardSelected: {
+      borderColor: '#FF3B30', // Red
+      backgroundColor: '#ff3b3020',
+    },
+  });
 
   const handleCreate = async () => {
     if (!user) return;
@@ -78,7 +137,7 @@ export default function CreateBossScreen() {
       <TextInput
         style={styles.input}
         placeholder="e.g., Deep Clean the House"
-        placeholderTextColor={Colours.light.placeholder}
+        placeholderTextColor={theme.placeholder}
         value={name}
         onChangeText={setName}
       />
@@ -115,61 +174,3 @@ export default function CreateBossScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: Colours.light.background,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colours.light.text,
-    marginBottom: 8,
-    marginTop: 20,
-  },
-  input: {
-    height: 44,
-    borderColor: Colours.light.border,
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingLeft: 10,
-    fontSize: 16,
-    color: Colours.light.text,
-    backgroundColor: Colours.light.card,
-  },
-  buttonContainer: {
-    marginTop: 30,
-  },
-  difficultyContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
-  },
-  difficultyButton: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: Colours.light.border,
-    alignItems: 'center',
-    marginHorizontal: 5,
-  },
-  difficultyButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  easySelected: {
-    borderColor: '#34C759', // Green
-    backgroundColor: '#34c75920',
-  },
-  mediumSelected: {
-    borderColor: '#FF9500', // Orange
-    backgroundColor: '#ff950020',
-  },
-  hardSelected: {
-    borderColor: '#FF3B30', // Red
-    backgroundColor: '#ff3b3020',
-  },
-});
