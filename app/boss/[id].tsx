@@ -2,7 +2,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { collection, doc, getDoc, increment, onSnapshot, writeBatch } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Button, FlatList, StyleSheet, Text, View } from 'react-native';
-import {useTheme } from '../context/ThemeContext';
+import { useTheme } from '../../context/ThemeContext';
 import { db } from '../../firebase/config';
 import { Boss, BossAttack, UserStats } from '../../types';
 // We'll re-use our TaskItem component to display attacks!

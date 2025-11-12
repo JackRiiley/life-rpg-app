@@ -1,15 +1,59 @@
 import { addDoc, collection, Timestamp } from 'firebase/firestore';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Button, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
-import Colours from '../constants/Colours';
 import { useAuth } from '../context/AuthContext'; // We need the user to add 'ownerId'
+import { useTheme } from '../context/ThemeContext';
 import { db } from '../firebase/config';
 
 export const AddTaskForm = () => {
   const { user } = useAuth();
+  const { theme } = useTheme();
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [isDaily, setIsDaily] = useState(false);
   const [isAddingTask, setIsAddingTask] = useState(false);
+
+  const styles = StyleSheet.create({
+    formContainer: {
+      backgroundColor: theme.card,
+      borderRadius: 12,
+      padding: 15,
+      marginBottom: 20,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    inputContainer: {
+      flexDirection: 'row',
+      marginBottom: 10,
+    },
+    input: {
+      flex: 1,
+      height: 44,
+      borderColor: theme.border,
+      borderWidth: 1,
+      borderRadius: 8,
+      paddingLeft: 10,
+      marginRight: 8,
+      fontSize: 16,
+      color: theme.text,
+    },
+    addSpinner: {
+      paddingHorizontal: 16,
+    },
+    switchContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 5,
+      marginTop: 5,
+    },
+    switchLabel: {
+      fontSize: 16,
+      color: theme.textSecondary,
+    },
+  });
 
   const handleAddTask = async () => {
     if (newTaskTitle.trim() === '') {
@@ -49,7 +93,7 @@ export const AddTaskForm = () => {
         <TextInput
           style={styles.input}
           placeholder="Add a new habit..."
-          placeholderTextColor={Colours.light.placeholder}
+          placeholderTextColor={theme.placeholder}
           value={newTaskTitle}
           onChangeText={setNewTaskTitle}
           editable={!isAddingTask}
@@ -72,47 +116,3 @@ export const AddTaskForm = () => {
     </View>
   );
 };
-
-// We move all the form styles here
-const styles = StyleSheet.create({
-  formContainer: {
-    backgroundColor: Colours.light.card,
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    marginBottom: 10,
-  },
-  input: {
-    flex: 1,
-    height: 44,
-    borderColor: Colours.light.border,
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingLeft: 10,
-    marginRight: 8,
-    fontSize: 16,
-    color: Colours.light.text,
-  },
-  addSpinner: {
-    paddingHorizontal: 16,
-  },
-  switchContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 5,
-    marginTop: 5,
-  },
-  switchLabel: {
-    fontSize: 16,
-    color: Colours.light.textSecondary,
-  },
-});
