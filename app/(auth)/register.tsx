@@ -37,6 +37,8 @@ export default function RegisterScreen() {
         rank: 'E',
         selectedTitle: 'Newbie',
         activeTheme: 'default_light', // Default theme
+        currentStreak: 0,
+        lastCompletedDate: '',
 
         // --- V2 Attributes ---
         attributePoints: 0, // No points to spend at level 1

@@ -19,6 +19,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { db } from '../../firebase/config'; // Import our db
 import { updateProgress } from '../../services/achievementService';
 import { grantRewards } from '../../services/gameLogic';
+import { updateStreak, checkStreak } from '../../services/streakService';
 import { ActiveQuest, SectionTask, Task } from '../../types';
 
 export default function HomeScreen() {
@@ -71,6 +72,10 @@ export default function HomeScreen() {
     // We define an async function inside the effect
     const setupTasksAndDailies = async () => {
       try {
+
+        // --- NEW: Check and Update Streak ---
+        await checkStreak(user.uid);
+
         // --- 1. Run Reset Logic FIRST ---
         console.log('Checking if dailies need reset...');
         const today = new Date().toISOString().split('T')[0];
@@ -210,6 +215,7 @@ export default function HomeScreen() {
         const taskXp = task.xp || 20;
         await grantRewards(user.uid, taskXp, 5); // 20 XP (from taskXp) and 5 Coins // <-- Use our new function
         await updateProgress(user.uid, 'tasksCompleted', 1);
+        await updateStreak(user.uid);
       }
       
       // Finally, toggle the task's completion status
@@ -241,6 +247,7 @@ export default function HomeScreen() {
     // 1. Grant the XP
     await grantRewards(user.uid, quest.xp || 25, 10); // Use the quest's XP value
     await updateProgress(user.uid, 'tasksCompleted', 1);
+    await updateStreak(user.uid);
 
     // 2. Delete the quest from the user's 'activeDailies'
     const questRef = doc(db, 'users', user.uid, 'activeDailies', quest.id);

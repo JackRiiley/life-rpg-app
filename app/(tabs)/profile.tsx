@@ -3,8 +3,8 @@ import { signOut } from 'firebase/auth';
 import { doc, increment, onSnapshot, updateDoc } from 'firebase/firestore'; // Import onSnapshot
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, DimensionValue, Pressable, StyleSheet, Text, View } from 'react-native';
-import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { auth, db } from '../../firebase/config';
 import { UserStats } from '../../types';
 
@@ -193,6 +193,16 @@ export default function ProfileScreen() {
     fontSize: 16,
     fontWeight: '600',
   },
+  streakContainer: {
+    alignItems: 'flex-start',
+    marginTop: 8,
+    alignSelf: 'flex-start', // Align to the left
+  },
+  streakText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FF9500', // A fiery orange
+  },
 });
 
   // --- 1. Listen for real-time stats updates ---
@@ -294,6 +304,10 @@ export default function ProfileScreen() {
           {/* --- NEW: Coins Display --- */}
           <View style={styles.coinContainer}>
             <Text style={styles.coinText}>💰 {stats.coins} Coins</Text>
+          </View>
+
+          <View style={styles.streakContainer}>
+            <Text style={styles.streakText}>🔥 {stats.currentStreak} Day Streak</Text>
           </View>
           
           {/* --- XP Progress Bar --- */}

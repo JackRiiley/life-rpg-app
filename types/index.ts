@@ -59,6 +59,8 @@ export interface UserStats {
   coins: number;
   selectedTitle: string;
   activeTheme: string;
+  currentStreak: number;
+  lastCompletedDate: string;
 
   // --- V2 Attributes ---
   attributePoints: number; // Points to spend on level up

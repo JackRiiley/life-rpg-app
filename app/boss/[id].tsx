@@ -2,14 +2,14 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { collection, doc, getDoc, increment, onSnapshot, writeBatch } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Button, FlatList, StyleSheet, Text, View } from 'react-native';
-import { useTheme } from '../../context/ThemeContext';
-import { db } from '../../firebase/config';
-import { Boss, BossAttack, UserStats } from '../../types';
-// We'll re-use our TaskItem component to display attacks!
 import TaskItem from '../../components/TaskItem';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
+import { db } from '../../firebase/config';
 import { updateProgress } from '../../services/achievementService';
 import { grantRewards } from '../../services/gameLogic';
+import { updateStreak } from '../../services/streakService';
+import { Boss, BossAttack, UserStats } from '../../types';
 
 export default function BossDetailScreen() {
   // Get the 'id' from the URL (e.g., /boss/xyz)
@@ -159,6 +159,7 @@ export default function BossDetailScreen() {
       // --- 3. Grant Rewards (XP & Coins) ---
       await grantRewards(user.uid, attack.xp, attack.coins);
       await updateProgress(user.uid, 'tasksCompleted', 1);
+      await updateStreak(user.uid);
 
       // --- 4. Prepare the Database Batch ---
       const batch = writeBatch(db);
