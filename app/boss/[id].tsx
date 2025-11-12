@@ -1,5 +1,5 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { collection, doc, onSnapshot } from 'firebase/firestore';
+import { collection, doc, getDoc, increment, onSnapshot, writeBatch } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Button, FlatList, StyleSheet, Text, View } from 'react-native';
 import Colours from '../../constants/Colours';
@@ -8,9 +8,8 @@ import { Boss, BossAttack } from '../../types';
 // We'll re-use our TaskItem component to display attacks!
 import TaskItem from '../../components/TaskItem';
 import { useAuth } from '../../context/AuthContext';
-import { grantRewards } from '../../services/gameLogic';
 import { updateProgress } from '../../services/achievementService';
-import { updateDoc, increment, writeBatch } from 'firebase/firestore';
+import { grantRewards } from '../../services/gameLogic';
 
 export default function BossDetailScreen() {
   // Get the 'id' from the URL (e.g., /boss/xyz)
@@ -68,54 +67,74 @@ export default function BossDetailScreen() {
     if (!user || !boss || attack.isComplete) return;
 
     console.log(`Completing attack: ${attack.title}`);
-    
-    // We use a writeBatch to make all our database changes safely
-    const batch = writeBatch(db);
 
     try {
-      // --- 1. Grant Rewards (XP & Coins) ---
-      // We call this first, but it's not part of the batch.
-      // (This is fine, as it updates a different document)
+      // --- 1. Get User Stats for Attribute Bonus ---
+      const userStatsRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userStatsRef);
+      if (!userDoc.exists()) {
+        Alert.alert("Error", "Could not find your user stats.");
+        return;
+      }
+      const stats = userDoc.data() as UserStats;
+
+      // --- 2. Calculate Bonus Damage ---
+      // Simple formula: +5 damage for each point in the matching attribute.
+      const attributeName = attack.attribute;
+      const bonusDamage = (stats.attributes[attributeName] || 0) * 5;
+      const totalDamage = attack.damage + bonusDamage;
+
+      console.log(`Base Damage: ${attack.damage}, Bonus: ${bonusDamage}, Total: ${totalDamage}`);
+
+      // --- 3. Grant Rewards (XP & Coins) ---
+      // We do this *before* the batch
       await grantRewards(user.uid, attack.xp, attack.coins);
-      // Also update task progress for achievements
       await updateProgress(user.uid, 'tasksCompleted', 1);
 
-      // --- 2. Mark Attack as Complete ---
+      // --- 4. Prepare the Database Batch ---
+      const batch = writeBatch(db);
+
+      // Mark Attack as Complete
       const attackRef = doc(db, 'bosses', id, 'attacks', attack.id);
       batch.update(attackRef, { isComplete: true });
 
-      // --- 3. Damage the Boss ---
+      // Damage the Boss
       const bossRef = doc(db, 'bosses', id);
-      const newHp = boss.currentHp - attack.damage;
+      const newHp = boss.currentHp - totalDamage;
       
       // Check if this attack defeats the boss
       if (newHp <= 0) {
         console.log("BOSS DEFEATED!");
         batch.update(bossRef, {
-          currentHp: 0, // Don't go below 0
-          isComplete: true, // Mark boss as done
+          currentHp: 0,
+          isComplete: true,
         });
         
+        await batch.commit(); // Commit the changes *before* showing alerts
+
         // Grant a massive bonus for defeating the boss!
-        await grantRewards(user.uid, 500, 100); // e.g., 500 XP, 100 Coins
+        await grantRewards(user.uid, 500, 100); 
         
         Alert.alert(
           "Boss Defeated!",
           `You've defeated ${boss.name}!\n\n+500 XP, +100 Coins`
         );
-        
-        // Send user back to the boss list
-        router.back();
+        router.back(); // Send user back
 
       } else {
         // Boss is damaged but not defeated
         batch.update(bossRef, {
-          currentHp: increment(-attack.damage), // Safely subtract HP
+          currentHp: increment(-totalDamage), // Use totalDamage
         });
-      }
 
-      // --- 4. Commit all changes ---
-      await batch.commit();
+        await batch.commit(); // Commit the changes
+
+        // Show a simple alert
+        Alert.alert(
+          "Attack Landed!",
+          `You dealt ${attack.damage} base damage + ${bonusDamage} attribute bonus for ${totalDamage} total damage!`
+        );
+      }
       
     } catch (error) {
       console.error("Error completing attack: ", error);
